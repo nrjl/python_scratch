@@ -3,6 +3,8 @@ import torch
 import time
 import matplotlib.pyplot as plt
 
+# Jump to main (at the bottom) to see basic flow
+
 class SimpleStepOptimiser:
     # Simple gradient descent optimiser object to show how to build a basic, torch-compatible optimiser
     
@@ -124,6 +126,7 @@ class SimpleOptimiser(object):
 
 
 def simple_linear(x, m, b, noise=0.0):
+    # Very simple linear function with added IID Gaussian noise on output
     return m*x + b + np.random.normal(scale=noise, size=x.shape)
 
 
@@ -134,7 +137,7 @@ if __name__ == "__main__":
     b_true = np.random.uniform(-1, 1)
     std = 0.2
 
-    # Generate data
+    # Generate data using the linear function
     x = np.linspace(0, 1.0, 1001)
     y = simple_linear(x, m_true, b_true, std)
 
