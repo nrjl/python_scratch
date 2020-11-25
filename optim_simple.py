@@ -4,6 +4,9 @@ import time
 import matplotlib.pyplot as plt
 
 class SimpleStepOptimiser:
+    # Simple gradient descent optimiser object to show how to build a basic, torch-compatible optimiser
+    
+    # Init with learning rate and a learning rate decay
     def __init__(self, variables, lr=1e-4, lr_decay=0.0):
         self.var = variables
         self.learning_rate = lr
@@ -20,9 +23,12 @@ class SimpleStepOptimiser:
         # Basic gradient step
         with torch.no_grad():
             for v in self.var:
+                # Simply look up the gradient, and multiply it by the learning rate
                 v -= self.learning_rate * v.grad
                 v.grad.zero_()
         self.iterations += 1
+        
+        # Decay the learning rate over time
         self.learning_rate *= (1-self.lr_decay)
 
 
@@ -36,8 +42,11 @@ class OptTest(object):
 
 
 class SimpleOptimiser(object):
-
+    # Basic optimiser object for a basic linear function with known gradient and intercept
+    # given input data x, output y and a loss function
     def __init__(self, x, y, loss = torch.nn.MSELoss(), gradient=1.0, intercept = 0.0):
+        
+        # Get the target torch device and send the data to the device
         self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.x = torch.Tensor(x).to(self._device)
         self.y = torch.Tensor(y).to(self._device)
@@ -49,6 +58,7 @@ class SimpleOptimiser(object):
         self.reset()
 
     def reset(self, m=None, b=None):
+        # Set the function parameters (gradient and intercept)
         if m is None: m = self._gradient0
         if b is None: b = self._intercept0
         self._linear_params = torch.Tensor([m, b]).to(self._device).requires_grad_()
@@ -57,32 +67,40 @@ class SimpleOptimiser(object):
         return self._loss_fn(prediction, self.y)
 
     def predict(self):
+        # Evaluate the linear function
         output = self.x*self._linear_params[0] + self._linear_params[1]
         return output
 
     def optimise(self, opt, n=1000, min_gradient=1e-5, opt_kwargs={'learning_rate':1e-5}, verbose=False):
+        # Run the optimiser!
+        # opt should optimise the parameter vector (in our case the gradient and intercept). We also
+        # pass through any extra arguments for the optimiser (stored as a dictionary)
         optimizer = opt([self._linear_params], **opt_kwargs)
         print(optimizer)
+        
+        # Start the main optimisation loop
         t0 = time.time()
         t = 0
         max_grad = min_gradient+1.0
         losses, grads, params = [], [], []
         while t < n and max_grad > min_gradient:
+            # Print the current parameters, and add them to our params history (so we can see how they change over time)
             print('{0:4} m: {1:5.2f}, b: {2:5.2f}, '.format(t, *self._linear_params), end='')
             params.append(self._linear_params.clone().detach().cpu().numpy())
-            optimizer.zero_grad()
+            
+            optimizer.zero_grad()       # Zero out gradients
             t1 = time.time()
-            output = self.predict()
+            output = self.predict()     # Predict the output (function inference)
             tp = time.time()
-
-            loss = self.evaluate_loss(output)
+            
+            loss = self.evaluate_loss(output)   # Evaluate the loss with this output
             tl = time.time()
 
-            losses.append(loss.item())
+            losses.append(loss.item())          # Append the loss
             print('loss={0:0.3e}, '.format(loss.item()), end='')
 
-            # Calculate derivative of loss with respect to parameters
-            loss.backward(retain_graph=True)
+            
+            loss.backward(retain_graph=True)    # Calculate derivative of loss with respect to parameters
             tb = time.time()
 
             max_grad = self._linear_params.grad.abs().max()
