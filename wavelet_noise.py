@@ -1,29 +1,33 @@
-From paper:
-@article{10.1145/1073204.1073264,
-author = {Cook, Robert L. and DeRose, Tony},
-title = {Wavelet Noise},
-year = {2005},
-issue_date = {July 2005},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {24},
-number = {3},
-issn = {0730-0301},
-url = {https://doi.org/10.1145/1073204.1073264},
-doi = {10.1145/1073204.1073264},
-abstract = {Noise functions are an essential building block for writing procedural shaders in 3D computer graphics. The original noise function introduced by Ken Perlin is still the most popular because it is simple and fast, and many spectacular images have been made with it. Nevertheless, it is prone to problems with aliasing and detail loss. In this paper we analyze these problems and show that they are particularly severe when 3D noise is used to texture a 2D surface. We use the theory of wavelets to create a new class of simple and fast noise functions that avoid these problems.},
-journal = {ACM Trans. Graph.},
-month = jul,
-pages = {803–811},
-numpages = {9},
-keywords = {rendering, noise, procedural textures, shading, texture synthesis, texturing, wavelets, multiresolution analysis}
-}
 
-https://dl.acm.org/doi/pdf/10.1145/1073204.1073264
+# From paper:
+# @article{10.1145/1073204.1073264,
+# author = {Cook, Robert L. and DeRose, Tony},
+# title = {Wavelet Noise},
+# year = {2005},
+# issue_date = {July 2005},
+# publisher = {Association for Computing Machinery},
+# address = {New York, NY, USA},
+# volume = {24},
+# number = {3},
+# issn = {0730-0301},
+# url = {https://doi.org/10.1145/1073204.1073264},
+# doi = {10.1145/1073204.1073264},
+# abstract = {Noise functions are an essential building block for writing procedural shaders in 3D computer graphics. The original noise function introduced by Ken Perlin is still the most popular because it is simple and fast, and many spectacular images have been made with it. Nevertheless, it is prone to problems with aliasing and detail loss. In this paper we analyze these problems and show that they are particularly severe when 3D noise is used to texture a 2D surface. We use the theory of wavelets to create a new class of simple and fast noise functions that avoid these problems.},
+# journal = {ACM Trans. Graph.},
+# month = jul,
+# pages = {803–811},
+# numpages = {9},
+# keywords = {rendering, noise, procedural textures, shading, texture synthesis, texturing, wavelets, multiresolution analysis}
+# }
 
-/* Note: this code is designed for brevity, not efficiency; many operations can be hoisted,
-* precomputed, or vectorized. Some of the straightforward details, such as tile meshing,
-* decorrelating bands and fading out the last band, are omitted in the interest of space.*/
+
+## Notes from original C code:
+# /* Note: this code is designed for brevity, not efficiency; many operations can be hoisted,
+# * precomputed, or vectorized. Some of the straightforward details, such as tile meshing,
+# * decorrelating bands and fading out the last band, are omitted in the interest of space.*/
+
+def
+
 static float *noiseTileData; static int noiseTileSize;
 int Mod(int x, int n) {int m=x%n; return (m<0) ? m+n : m;}
 #define ARAD 16
