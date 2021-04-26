@@ -52,23 +52,35 @@ class RadarTrajectoryBag:
 
         return segment_times
 
-    def plot_trajectory(self, dt=0.1, dt_arrow=1.0):
+    def plot_trajectory(self, dt=0.1, dt_arrow=1.0, arrow_scale=0.5):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('E (m)')
+        ax.set_ylabel('N (m)')
+        ax.set_zlabel('U (m)')
 
         seglines = []
+        arrows = []
 
-        for segment in self._trajectory.segments[0:2]:
-            tp = np.arange(0.0, segment.segment_time.secs + 1.0e-9*segment.segment_time.nsecs, dt)
-            tp = np.append(tp, segment.segment_time.secs + 1.0e-9*segment.segment_time.nsecs)
+        for segment in self._trajectory.segments:
             x_poly = np.polynomial.Polynomial(segment.x)
             y_poly = np.polynomial.Polynomial(segment.y)
             z_poly = np.polynomial.Polynomial(segment.z)
             yaw_poly = np.polynomial.Polynomial(segment.yaw)
 
+            # Plot segment positions (even spacing plus end point)
+            tp = np.arange(0.0, segment.segment_time.secs + 1.0e-9*segment.segment_time.nsecs, dt)
+            tp = np.append(tp, segment.segment_time.secs + 1.0e-9*segment.segment_time.nsecs)
             seglines.append(ax.plot(x_poly(tp), y_poly(tp), z_poly(tp))[0])
 
-        return fig, ax, seglines
+            # Plot arrows (even spacing)
+            tp = np.arange(0.0, segment.segment_time.secs + 1.0e-9*segment.segment_time.nsecs, dt_arrow)
+            v = arrow_scale*np.cos(yaw_poly(tp))
+            u = -arrow_scale*np.sin(yaw_poly(tp))
+            w = np.zeros_like(u)
+            arrows.append(ax.quiver(x_poly(tp), y_poly(tp), z_poly(tp), u, v, w))
+
+        return fig, ax, seglines, arrows
 
     def get_vehicle_topic(self, topic):
         return '/'+self._vehicle_name+'/'+topic
