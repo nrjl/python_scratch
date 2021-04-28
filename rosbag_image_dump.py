@@ -75,10 +75,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Extract images from rosbag')
     parser.add_argument('-o', '--output-dir', default='.', help='Output directory')
+    parser.add_argument('-q', '--quality', default=95, help='JPEG output image quality')
     parser.add_argument('BAGFILE', type=str, help='Input rosbag file')
     parser.add_argument('IMAGE_TOPIC', type=str, help='ROS image topic')
 
     args = parser.parse_args()
 
     bag_obj = BagReader(args.BAGFILE)
-    bag_obj.dump_images(args.IMAGE_TOPIC, out_dir=args.output_dir)
+    bag_obj.dump_images(args.IMAGE_TOPIC, out_dir=args.output_dir, quality=args.quality)
