@@ -54,6 +54,6 @@ for i, o in enumerate(O):
         PO[i + 1] = X * PO[i] / (PO[i] * X).sum()
     KLD.append(np.sum(PO[i+1]*np.log(PO[i+1]/PO[i])))
 
-plt.show(block=False)
+plt.show()
 
 
