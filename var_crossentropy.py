@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.stats import beta
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+
+colour_cycler = mpl.rcParams["axes.prop_cycle"]
 
 # Simulated predictions from an ensemble of N models for M instances
 M = 10000  # Number of instances
@@ -23,11 +26,12 @@ ax[1].set_title("Variance vs. Cross-Entropy")
 h_p, labels = [], []
 
 for goodness, sample_number, colour in zip(
-    [0.9, 0.9, 0.7, 0.5], [100, 10, 10, 2], ["r", "g", "b", "k"]
+    [0.9, 0.9, 0.7, 0.5, 0.2], [100, 10, 10, 2, 10], colour_cycler
 ):
 
     a = goodness * sample_number
     b = sample_number * (1 - goodness)
+    colour = colour["color"]
 
     beta_one = beta(a, b)
     beta_zero = beta(b, a)
@@ -56,6 +60,14 @@ for goodness, sample_number, colour in zip(
     print(f"Alpha = {a}, beta = {b}")
     print(f"Mean variance: {np.mean(variance_predictions)}")
     print(f"Mean cross-entropy: {np.mean(cross_entropy)}")
+
+# Max cross entropy:
+var_range = np.linspace(0.001, 0.25, 100)
+max_mean = (1 + np.sqrt(1 - 4 * var_range)) / 2
+max_ce = -np.log(1 - max_mean)
+min_ce = -np.log(max_mean)
+ax[1].plot(var_range, max_ce, ls="--", color="grey")
+ax[1].plot(var_range, min_ce, ls="--", color="grey")
 
 ax[0].legend(h_p, labels)
 plt.savefig("var_ce.png")
