@@ -7,8 +7,11 @@ import numpy as np
 from tqdm import tqdm
 
 
-def align_images(im1, im2, n_features=500, match_proportion=0.2, show_matches=False):
-    # Assume inputs are greyscale
+def align_images(
+    im1_rgb, im2, n_features=500, match_proportion=0.2, show_matches=False
+):
+    # Assume im2 ref frame is greyscale
+    im1 = cv2.cvtColor(im1_rgb, cv2.COLOR_BGR2GRAY)
 
     # get orb features
     orb = cv2.ORB_create(n_features)
@@ -21,7 +24,8 @@ def align_images(im1, im2, n_features=500, match_proportion=0.2, show_matches=Fa
 
     # Sort matches by score and get top
     matches = sorted(matches, key=lambda x: x.distance)
-    matches = matches[: int(len(matches) * match_proportion)]
+    n_keep = int(len(matches) * match_proportion)
+    matches = matches[:n_keep]
 
     # visualise if needed
     if show_matches:
@@ -31,18 +35,19 @@ def align_images(im1, im2, n_features=500, match_proportion=0.2, show_matches=Fa
         cv2.waitKey(0)
 
     # Extract location of good matches
-    points1 = np.zeros((len(matches), 2), dtype=np.float32)
-    points2 = points1.copy()
+    points1 = np.zeros((len(matches), 2), dtype="float")
+    points2 = np.zeros((len(matches), 2), dtype="float")
 
     for i, match in enumerate(matches):
-        points1[i, :] = kp1[match.queryIdx].pt
-        points2[i, :] = kp2[match.trainIdx].pt
+        points1[i] = kp1[match.queryIdx].pt
+        points2[i] = kp2[match.trainIdx].pt
 
     # Find homography
-    h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
+    H, mask = cv2.findHomography(points1, points2, method=cv2.RANSAC)
 
     # Use homography
-    aligned = cv2.warpPerspective(im1, h, im2.shape)
+    height, width = im2.shape[:2]
+    aligned = cv2.warpPerspective(im1_rgb, H, (width, height))
     return aligned
 
 
@@ -63,6 +68,7 @@ if __name__ == "__main__":
         default=-1,
         help="Optional index for reference image",
     )
+    parser.add_argument("--show-matches", action="store_true", help="Show match images")
     parser.add_argument("video", help="Video file")
     args = vars(parser.parse_args())
 
@@ -87,11 +93,12 @@ if __name__ == "__main__":
     # cv2.waitKey(0)
 
     # Make output
+    h, w = ref_frame.shape[:2]
     out = cv2.VideoWriter(
         "stable.mp4",
         cv2.VideoWriter_fourcc(*"mp4v"),
         30,
-        (int(cap.get(3)), int(cap.get(4))),
+        (w, h),
     )
     if (args["max_frames"] > 0) and (args["max_frames"] < n_frames):
         n_frames = args["max_frames"]
@@ -101,8 +108,7 @@ if __name__ == "__main__":
 
     for i in tqdm(range(n_frames), desc="Iterating over images"):
         res, frame = cap.read()
-        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        aligned = align_images(frame_gray, ref_gray, show_matches=False)
+        aligned = align_images(frame, ref_gray, show_matches=args["show_matches"])
         # cv2.imwrite(f"aligned/{i:03d}.png", aligned)
         out.write(aligned)
 
