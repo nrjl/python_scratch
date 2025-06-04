@@ -11,19 +11,23 @@ class CovarianceEllipses2D:
         self,
         ellipse_masses: list | np.ndarray = [0.68, 0.95],
         n_theta: int = 100,
-        n_marginals: int = 50,
+        n_marginals: int = 100,
     ) -> None:
-        self._ellipse_scales = np.sqrt(chi2.ppf(ellipse_masses, df=2))
+        self.update_ellipse_masses(ellipse_masses)
         self.theta = np.linspace(0, 2 * np.pi, n_theta)
         self.m_x = np.linspace(-5, 5, n_marginals)
 
     def update_mean_cov(self, mean: list | np.ndarray, cov: list | np.ndarray):
         self.mean, self.cov = _check_mean_cov(mean, cov)
 
+    def update_ellipse_masses(self, ellipse_masses: list | np.ndarray = [0.68, 0.95]):
+        self._ellipse_masses = ellipse_masses
+        self._ellipse_scales = np.sqrt(chi2.ppf(self._ellipse_masses, df=2))
+
     def make_ellipses(self) -> list[go.Scatter]:
         d1, d2, angle = self._get_ellipse_params()
         graph_obj = []
-        for s in self._ellipse_scales:
+        for m, s in zip(self._ellipse_masses, self._ellipse_scales):
             x = (
                 s * d1 * np.cos(self.theta) * np.cos(angle)
                 - (s * d2 * np.sin(self.theta) * np.sin(angle))
@@ -34,7 +38,9 @@ class CovarianceEllipses2D:
                 + (s * d2 * np.sin(self.theta) * np.cos(angle))
                 + self.mean[1]
             )
-            graph_obj.append(go.Scatter(x=x, y=y, mode="lines"))
+            graph_obj.append(
+                go.Scatter(x=x, y=y, mode="lines", name=f"{m*100:0.1f}% confidence")
+            )
         return graph_obj
 
     def marginals(self) -> list[go.Scatter]:
