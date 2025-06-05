@@ -1,8 +1,8 @@
 import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output
-import plotly.graph_objs as go
 import numpy as np
+import plotly.graph_objs as go
+from dash import ctx, dcc, html
+from dash.dependencies import Input, Output
 from scipy.stats import chi2
 
 from plot_tools.covariance_ellipse_plotly import CovarianceEllipses2D
@@ -10,16 +10,32 @@ from plot_tools.covariance_ellipse_plotly import CovarianceEllipses2D
 app = dash.Dash(__name__)
 
 mean = [0, 0]
-cov = [[1, 0], [0, 1]]
+cov = np.array([[1, 0], [0, 1]])
 ellipse_masses = [0.68, 0.99]
 cov_ellipse = CovarianceEllipses2D(ellipse_masses=ellipse_masses)
+pts = []
 
 cov_Q = np.eye(2)
 det_Q = np.linalg.det(cov_Q)
 inv_covQ = np.linalg.inv(cov_Q)
 
-# dcc.Markdown("Marginal ($x$) distribution $p(x)$", mathjax=True)
-# dcc.Markdown("Marginal ($y$) distribution $p(y)$", mathjax=True)
+n_resets = 0
+
+joint_layout = go.Layout(
+    title=dict(text=r"Joint distribution $p(x,y)$"),
+    xaxis=dict(title="x", range=[-10, 10], scaleanchor="y", scaleratio=1),
+    yaxis=dict(title="y", range=[-10, 10]),
+)
+p_x_layout = go.Layout(
+    title=dict(text=r"Marginal distribution $p(x)$"),
+    xaxis=dict(title="x", range=[-5, 5]),
+    yaxis=dict(title="p(x)", range=[0, 2]),
+)
+p_y_layout = go.Layout(
+    title=dict(text=r"Marginal distribution $p(y)$"),
+    xaxis=dict(title="y", range=[-5, 5]),
+    yaxis=dict(title="p(y)", range=[0, 2]),
+)
 
 app.layout = html.Div(
     [
@@ -49,9 +65,9 @@ app.layout = html.Div(
                             value=1,
                             marks={i: str(i) for i in range(4)},
                         ),
-                        dcc.Markdown(r"$\sigma_{xy}$", mathjax=True),
+                        dcc.Markdown(r"$\mathrm{cov}_{xy}$", mathjax=True),
                         dcc.Slider(
-                            id="sig_xy",
+                            id="cov_xy",
                             min=-1.0,
                             max=1.0,
                             step=0.05,
@@ -63,6 +79,7 @@ app.layout = html.Div(
                         html.Div(id="trace"),
                         html.Div(id="min_eig"),
                         html.Div(id="kld"),
+                        html.Button('Reset', id='reset_button', n_clicks=0),
                     ],
                     style={
                         "display": "flex",
@@ -70,7 +87,8 @@ app.layout = html.Div(
                         "width": "20%",
                     },
                 ),
-                dcc.Graph(id="graph_p_xy"),
+                dcc.Graph(id="graph_p_xy", figure={'layout': joint_layout}), #, layout={'clickmode': 'event+select'}),
+                # html.Div(id="click-output"),
                 html.Div(
                     [
                         dcc.Graph(id="graph_p_x"),
@@ -84,30 +102,17 @@ app.layout = html.Div(
     ]
 )
 
-joint_layout = go.Layout(
-    title=dict(text=r"Joint distribution $p(x,y)$"),
-    xaxis=dict(title="x", range=[-10, 10], scaleanchor="y", scaleratio=1),
-    yaxis=dict(title="y", range=[-10, 10]),
-)
-p_x_layout = go.Layout(
-    title=dict(text=r"Marginal distribution $p(x)$"),
-    xaxis=dict(title="x", range=[-5, 5]),
-    yaxis=dict(title="p(x)", range=[0, 2]),
-)
-p_y_layout = go.Layout(
-    title=dict(text=r"Marginal distribution $p(y)$"),
-    xaxis=dict(title="y", range=[-5, 5]),
-    yaxis=dict(title="p(y)", range=[0, 2]),
-)
-
 
 @app.callback(
     Output("graph_p_xy", "figure"),
+    # Output("click-output", "children"),
     Output("graph_p_x", "figure"),
     Output("graph_p_y", "figure"),
-    Output("sig_xy", "min"),
-    Output("sig_xy", "max"),
-    Output("sig_xy", "value"),
+    Output("sig_xx", "value"),
+    Output("sig_yy", "value"),
+    Output("cov_xy", "min"),
+    Output("cov_xy", "max"),
+    Output("cov_xy", "value"),
     Output("cov_matrix", "children"),
     Output("determinant", "children"),
     Output("trace", "children"),
@@ -115,12 +120,19 @@ p_y_layout = go.Layout(
     Output("kld", "children"),
     Input("sig_xx", "value"),
     Input("sig_yy", "value"),
-    Input("sig_xy", "value"),
+    Input("cov_xy", "value"),
+    Input("reset_button", "n_clicks")
+    # Input("graph_p_xy", "clickData"),
 )
-def update_graph(sig_xx, sig_yy, sig_xy):
-    max_sig_xy = (sig_xx * sig_yy) ** 0.5
-    sig_xy = min(max(sig_xy, -max_sig_xy), max_sig_xy)
-    cov_update = np.array([[sig_xx**2, sig_xy**2], [sig_xy**2, sig_yy**2]])
+def update_graph(sig_xx, sig_yy, cov_xy, n_clicks_reset):
+    if ctx.triggered_id == 'reset_button':
+        sig_xx = cov[0,0]
+        sig_yy = cov[1,1]
+        cov_xy = cov[0,1]
+
+    max_cov_xy = sig_xx * sig_yy
+    cov_xy = min(max(cov_xy, -max_cov_xy), max_cov_xy)
+    cov_update = np.array([[sig_xx**2, cov_xy], [cov_xy, sig_yy**2]])
 
     # Update the covariance object
     cov_ellipse.update_mean_cov(mean, cov_update)
@@ -139,7 +151,7 @@ def update_graph(sig_xx, sig_yy, sig_xy):
         mathjax=True,
     )
     determinant = dcc.Markdown(
-        f"D-optimality: Determinant $\\det( \\Sigma ) = {det_P:0.2f}$",
+        f"D-optimality: Determinant $\\det( \\Sigma^{{-1}} ) = {1.0/det_P:0.2f}$",
         mathjax=True,
     )
     trace = dcc.Markdown(
@@ -149,7 +161,7 @@ def update_graph(sig_xx, sig_yy, sig_xy):
 
     eigenvals = np.linalg.eigvalsh(cov_update)
     min_eig = dcc.Markdown(
-        f"E-optimality: Min. eigenvalue $\\lambda_{{min}} = {eigenvals.min():0.2f}$",
+        f"E-optimality: Min. eigenvalue $\\lambda_{{min}} = {1.0/eigenvals.max():0.2f}$",
         mathjax=True,
     )
 
@@ -158,13 +170,29 @@ def update_graph(sig_xx, sig_yy, sig_xy):
         f"KL-Divergence $D_{{\\mathrm{{KL}}}}( P || I_2 ) = {dkl:0.2f}$", mathjax=True
     )
 
+    # # If clicked for observation
+    # if clickData:
+    #     pt = clickData["points"][0]
+    #     # cov_ellipse.add_observation(pt)
+    #     pts.append(pt)
+    #     gobj.append(
+    #         go.Scatter(
+    #             x=[p[0] for p in pts],
+    #             y=[p[1] for p in pts],
+    #             mode="points",
+    #             name="observations",
+    #         )
+    #     )
+
     return (
         {"data": gobj, "layout": joint_layout},
         {"data": [marginals[0]], "layout": p_x_layout},
         {"data": [marginals[1]], "layout": p_y_layout},
-        -max_sig_xy,
-        max_sig_xy,
-        sig_xy,
+        sig_xx,
+        sig_yy,
+        -max_cov_xy,
+        max_cov_xy,
+        cov_xy,
         cov_matrix,
         determinant,
         trace,
