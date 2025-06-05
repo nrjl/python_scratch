@@ -40,7 +40,7 @@ p_y_layout = go.Layout(
 app.layout = html.Div(
     [
         dcc.Markdown(
-            "# Joint distribution properties (covariance ellipses) in 2D $p(x,y)$",
+            r"# Joint distribution properties (covariance ellipses) in 2D $p(x,y) = \mathcal{N}(\mu,\Sigma)$",
             mathjax=True,
         ),
         html.Div(
