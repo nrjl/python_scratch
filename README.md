@@ -13,7 +13,7 @@ Check help with `-h` flag.
 
 ### Covariance plotly
 
-Simple tool for interactively plotting 2D normal distributions and optimality statistics.
+Simple tool for interactively plotting 2D normal distributions and optimality statistics using plotly and dash.
 ```bash
 python covariance_plot.py
 ```
